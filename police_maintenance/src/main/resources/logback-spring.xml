@@ -3,7 +3,7 @@
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d %p (%file:%line\)- %m%n</pattern>
-            <charset>GBK</charset>
+            <charset>utf-8</charset>
         </encoder>
     </appender>
         <!-- RollingFileAppender：滚动记录文件，先将日志记录到指定文件，当符合某个条件时，将日志记录到其他文件 -->
