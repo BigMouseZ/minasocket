@@ -18,7 +18,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
+import java.util.Enumeration;
 import java.util.concurrent.Executors;
 
 /**
@@ -58,7 +61,16 @@ public class MinaConfig {
      **/
     @Bean
     public InetSocketAddress inetSocketAddress() {
-        return new InetSocketAddress(host, port);
+        try {
+            InetAddress inetAddress = getLocalHostLANAddress();
+            String ip = inetAddress.getHostAddress();
+            System.out.println("获取到的IP:"+ip);
+            host = ip;
+            return new InetSocketAddress(ip, port);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+      return null;
     }
 
     /**
@@ -91,5 +103,38 @@ public class MinaConfig {
         acceptor.bind(inetSocketAddress());
         logger.info("服务器在端口：" + host + ":" + port + "已经启动");
         return acceptor;
+    }
+
+
+    public InetAddress getLocalHostLANAddress() throws Exception {
+        try {
+            InetAddress candidateAddress = null;
+            // 遍历所有的网络接口
+            for (Enumeration ifaces = NetworkInterface.getNetworkInterfaces(); ifaces.hasMoreElements(); ) {
+                NetworkInterface iface = (NetworkInterface) ifaces.nextElement();
+                // 在所有的接口下再遍历IP
+                for (Enumeration inetAddrs = iface.getInetAddresses(); inetAddrs.hasMoreElements(); ) {
+                    InetAddress inetAddr = (InetAddress) inetAddrs.nextElement();
+                    if (!inetAddr.isLoopbackAddress()) {// 排除loopback类型地址
+                        if (inetAddr.isSiteLocalAddress()) {
+                            // 如果是site-local地址，就是它了
+                            return inetAddr;
+                        } else if (candidateAddress == null) {
+                            // site-local类型的地址未被发现，先记录候选地址
+                            candidateAddress = inetAddr;
+                        }
+                    }
+                }
+            }
+            if (candidateAddress != null) {
+                return candidateAddress;
+            }
+            // 如果没有发现 non-loopback地址.只能用最次选的方案
+            InetAddress jdkSuppliedAddress = InetAddress.getLocalHost();
+            return jdkSuppliedAddress;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }
